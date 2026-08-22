@@ -3,6 +3,9 @@ FROM node:24-slim AS builder
 
 WORKDIR /app
 
+# Install git if needed for npm ci
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Copy package files first (layer caching)
 COPY package.json package-lock.json ./
 
@@ -18,11 +21,12 @@ RUN node scripts/build-pages.js
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM node:24-slim
 
-# Install mudslide globally (uses the npm package, no binary download needed)
-# Also install tar (needed for session encryption/decryption)
+# Install git, tar, ca-certificates, and mudslide globally
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     tar \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g mudslide
 
@@ -31,7 +35,7 @@ WORKDIR /app
 # Copy built app from builder stage
 COPY --from=builder /app /app
 
-# Create users directory for session persistence (mount a volume here on paid plans)
+# Create users directory for session persistence
 RUN mkdir -p /app/users
 
 # Expose port
