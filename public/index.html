@@ -489,7 +489,7 @@
         // split into a dedicated API subdomain once served from GitHub Pages.
         const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
             ? ''
-            : 'https://api.watobot.xyz';
+            : '';
 
         function toggleModal() {
             const modal = document.getElementById('loginModal');
@@ -635,3 +635,4 @@
 	</div>
 	</body>
 </html>
+

@@ -61,7 +61,7 @@
       const API_BASE =
         location.hostname === "localhost" || location.hostname === "127.0.0.1"
           ? window.location.origin
-          : "https://api.watobot.xyz";
+          : "";
 
       // Published FAQ pages always live on the real production domain,
       // regardless of where the dashboard itself is running. Only faqSlug is
@@ -310,3 +310,4 @@
 <!--#include partial="dashboard-logout-modal"-->
   </body>
 </html>
+
