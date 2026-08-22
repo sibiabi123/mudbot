@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const os = require('os');
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const { proxyConfPath, getNotifyEmail } = require('./userService');
@@ -34,7 +35,7 @@ function mudslideDir(userDir) {
 }
 
 function tempDir(userDir) {
-  return path.join('/tmp', `mudbot-${userDir}`);
+  return path.join(os.tmpdir(), `mudbot-${userDir}`);
 }
 
 async function isLoggedIn(userDir) {

@@ -39,7 +39,15 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
 // stale cron entry behind. Awaiting here makes registration complete before
 // the process is considered "up," so any later stop is strictly ordered
 // after it.
+//
+// NOTE: crontab is Linux/macOS only. On Windows, both functions are no-ops.
+const IS_WINDOWS = process.platform === 'win32';
+
 function ensureDailyReportCron() {
+  if (IS_WINDOWS) {
+    console.log('[cron] Skipping daily report cron registration on Windows (crontab not available).');
+    return Promise.resolve();
+  }
   return new Promise(resolve => {
     const scriptPath = path.join(__dirname, 'scripts', 'daily-report.js');
     const cronLine = `5 0 * * * ${process.execPath} ${scriptPath}`;
@@ -63,6 +71,7 @@ function ensureDailyReportCron() {
 }
 
 function removeDailyReportCron() {
+  if (IS_WINDOWS) return Promise.resolve();
   return new Promise(resolve => {
     const get = spawn('crontab', ['-l']);
     let current = '';

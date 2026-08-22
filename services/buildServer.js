@@ -54,6 +54,11 @@ function buildServer() {
 
   fastify.register(require('../routes/api'));
 
+  // Health-check endpoint — used by UptimeRobot to keep the Render free tier awake.
+  fastify.get('/health', async (request, reply) => {
+    return reply.code(200).send({ status: 'ok', uptime: process.uptime() });
+  });
+
   return fastify;
 }
 

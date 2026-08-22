@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.env
+.env.*
+!.env.calendly.example
+server.log
+users/**/.mudslide
+users/**/logs.txt
+*.key
+.DS_Store
+certs/

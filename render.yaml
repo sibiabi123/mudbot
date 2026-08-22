@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: mudbot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore  # closest to India
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: MUDSLIDE_PATH
+        value: mudslide
+      - key: BASE_URL
+        sync: false   # set this in Render dashboard to your Render URL
+      - key: SMTP_HOST
+        sync: false   # set in Render dashboard
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: false
+      - key: SMTP_USER
+        sync: false   # set in Render dashboard
+      - key: SMTP_PASS
+        sync: false   # set in Render dashboard (use Gmail App Password)
+      - key: EMAIL_FROM
+        sync: false
+      - key: REPLY_TO
+        sync: false
+      - key: NOTIFY_EMAIL
+        sync: false
+      - key: PROXYCHAINS_PATH
+        value: ""
+      - key: DATAIMPULSE_USERNAME
+        value: ""
+      - key: DATAIMPULSE_PASSWORD
+        value: ""
