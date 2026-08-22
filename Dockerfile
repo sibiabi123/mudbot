@@ -36,6 +36,7 @@ WORKDIR /app
 # Copy built app from builder stage
 COPY --from=builder /app /app
 
+# Build timestamp: 2026-08-22 12:40
 # Create users directory for session persistence
 RUN mkdir -p /app/users
 
@@ -48,3 +49,4 @@ ENV MUDSLIDE_PATH=mudslide
 
 # Start cron daemon in background, then launch node server
 CMD ["sh", "-c", "cron && node server.js"]
+
