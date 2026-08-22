@@ -12,8 +12,9 @@ const CONFIG = {
   BASE_URL: process.env.BASE_URL || 'http://localhost:3000'
 };
 
-// Create transporter
-let transporter = null;
+function hasSmtpConfig() {
+  return !!(CONFIG.SMTP_USER && CONFIG.SMTP_PASS && CONFIG.SMTP_HOST && CONFIG.SMTP_HOST !== 'localhost');
+}
 
 function getTransporter() {
   if (!transporter) {
@@ -21,7 +22,10 @@ function getTransporter() {
       host: CONFIG.SMTP_HOST,
       port: CONFIG.SMTP_PORT,
       secure: CONFIG.SMTP_SECURE,
-      auth: CONFIG.SMTP_USER && CONFIG.SMTP_PASS ? {
+      connectionTimeout: 3000,
+      greetingTimeout: 3000,
+      socketTimeout: 3000,
+      auth: hasSmtpConfig() ? {
         user: CONFIG.SMTP_USER,
         pass: CONFIG.SMTP_PASS
       } : undefined
@@ -80,12 +84,17 @@ This email comes from Ashish, the creator of Watobot — just reply to it if you
     `
   };
 
+  if (!hasSmtpConfig()) {
+    console.log('[email] SMTP credentials not configured — skipping email delivery.');
+    return { success: true, skipped: true };
+  }
+
   try {
     const info = await getTransporter().sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email send error:', error);
+    console.warn('Email send error (non-fatal):', error.message);
     return { success: false, error: error.message };
   }
 }

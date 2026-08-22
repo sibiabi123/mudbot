@@ -82,9 +82,16 @@ async function routes(fastify, options) {
         return reply.code(400).send({ error: 'Valid email is required' });
       }
       const { token, userDir } = await userService.registerUser(email);
-      await emailService.sendRegistrationEmail(email, token, { skipWhatsappConnect: !!skipWhatsappConnect });
+      // Fire-and-forget email delivery in background if configured
+      emailService.sendRegistrationEmail(email, token, { skipWhatsappConnect: !!skipWhatsappConnect }).catch(() => {});
       emailService.sendOwnerNotification('new_registration', { userDir, email }).catch(() => {});
-      return { success: true, message: 'Registration email sent. Please check your inbox.' };
+      return { 
+        success: true, 
+        token, 
+        userDir, 
+        redirectUrl: `/dashboard/?token=${token}`,
+        message: 'Login successful! Redirecting to dashboard...' 
+      };
     } catch (error) {
       fastify.log.error(error);
       return reply.code(500).send({ error: 'Registration failed' });

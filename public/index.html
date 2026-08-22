@@ -469,14 +469,14 @@
 
 				<!-- Step 2: Registration form (hidden until user confirms) -->
 				<div id="modal-form" class="hidden">
-					<p class="text-on-surface-variant font-body-md mb-6">Enter your email to receive a secure login link.</p>
+					<p class="text-on-surface-variant font-body-md mb-6">Enter your email to log in directly to your dashboard.</p>
 					<form class="flex flex-col gap-4" onsubmit="handleRegistration(event)">
 						<div class="flex flex-col gap-1">
 							<label class="font-label-md text-label-md text-on-surface-variant">Email Address</label>
 							<input id="emailInput" class="bg-surface-container-low border-b-2 border-transparent focus:border-primary focus:ring-0 rounded-lg p-3 transition-all outline-none" placeholder="name@company.com" type="email" required/>
 						</div>
 						<div id="message" class="min-h-[20px]"></div>
-						<button id="submitBtn" type="submit" class="bg-primary-container text-on-primary-container font-bold py-4 rounded-xl hover:opacity-90 active:scale-95 transition-all">Send Login Link</button>
+						<button id="submitBtn" type="submit" class="bg-primary-container text-on-primary-container font-bold py-4 rounded-xl hover:opacity-90 active:scale-95 transition-all">Continue to Dashboard ➔</button>
 						<p class="text-center font-body-md text-on-surface-variant mt-2">By continuing, you agree to our
 							<a class="text-primary font-bold" href="#">Terms of Service</a>.
 						</p>
@@ -557,24 +557,29 @@
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    showMessage(`Success! Check your email (${email}) for the login link.`, 'success');
+                if (response.ok && data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    showMessage('Login successful! Opening dashboard...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl || `/dashboard/?token=${data.token}`;
+                    }, 500);
+                    return;
+                } else if (response.ok) {
+                    showMessage('Login successful! Check your email or refresh to continue.', 'success');
                     emailInput.value = '';
-                    
-                    // Close modal after 3 seconds
                     setTimeout(() => {
                         toggleModal();
                         messageDiv.textContent = '';
-                    }, 3000);
+                    }, 2000);
                 } else {
-                    showMessage(data.message || 'Registration failed. Please try again.', 'error');
+                    showMessage(data.error || data.message || 'Registration failed. Please try again.', 'error');
                 }
             } catch (error) {
                 console.error('Registration error:', error);
                 showMessage('Network error. Please check your connection and try again.', 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Send Login Link';
+                submitBtn.textContent = 'Continue to Dashboard';
             }
         }
 
