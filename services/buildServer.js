@@ -59,6 +59,15 @@ function buildServer() {
     return reply.code(200).send({ status: 'ok', uptime: process.uptime() });
   });
 
+  // Dashboard and clean HTML page routes
+  fastify.get('/dashboard', async (req, reply) => reply.sendFile('dashboard/index.html'));
+  fastify.get('/dashboard/', async (req, reply) => reply.sendFile('dashboard/index.html'));
+  fastify.get('/dashboard/schedules', async (req, reply) => reply.sendFile('dashboard/schedules.html'));
+  fastify.get('/dashboard/faqs', async (req, reply) => reply.sendFile('dashboard/faqs.html'));
+  fastify.get('/dashboard/calendly', async (req, reply) => reply.sendFile('dashboard/calendly.html'));
+  fastify.get('/verify', async (req, reply) => reply.sendFile('verify.html'));
+  fastify.get('/privacy', async (req, reply) => reply.sendFile('privacy.html'));
+
   return fastify;
 }
 
