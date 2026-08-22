@@ -23,15 +23,27 @@ function decryptPayload(payload, tokenHashHex) {
   return JSON.parse(decrypted.toString('utf8'));
 }
 
+// Build the correct internal API URL for loopback calls.
+// Cron jobs run in a clean environment without container env vars,
+// so we must use 127.0.0.1 (not localhost which resolves to IPv6 on Node 18+)
+// and default to port 3000 (not 80).
+function getApiUrl() {
+  const port = process.env.PORT || 3000;
+  return `http://127.0.0.1:${port}/api/message`;
+}
+
 async function main() {
   const tokenHash = (await fs.readFile(path.join(USERS_DIR, userDir, 'token_hash'), 'utf8')).trim();
   const { token, recipients, message, media } = decryptPayload(encryptedPayload, tokenHash);
+
+  const apiUrl = getApiUrl();
+  console.log(`[run-schedule] Sending to ${recipients.length} recipient(s) via ${apiUrl}`);
 
   for (const recipient of recipients) {
     try {
       const body = { to: recipient, message };
       if (media) body.media = media;
-      const res = await fetch(`${process.env.BASE_URL || 'http://localhost'}:${process.env.PORT || 80}/api/message`, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -42,6 +54,8 @@ async function main() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error(`Failed to send to ${recipient}: ${err.error || res.status}`);
+      } else {
+        console.log(`[run-schedule] Sent to ${recipient} successfully`);
       }
     } catch (err) {
       console.error(`Error sending to ${recipient}: ${err.message}`);
