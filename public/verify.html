@@ -495,7 +495,9 @@
         function showSetup() {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('qrCode').classList.remove('hidden');
-            detectLocation();
+            // Skip location detection (no residential proxy configured)
+            // Go directly to QR code display
+            showQRSection();
         }
 
         // Holds whatever location was actually persisted, so step 2 can
