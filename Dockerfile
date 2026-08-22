@@ -21,8 +21,9 @@ RUN node scripts/build-pages.js
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM node:24-slim
 
-# Install git, tar, ca-certificates, and mudslide globally
+# Install cron, git, tar, ca-certificates, curl, and mudslide globally
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
     git \
     tar \
     ca-certificates \
@@ -45,4 +46,5 @@ ENV PORT=3000
 ENV NODE_ENV=production
 ENV MUDSLIDE_PATH=mudslide
 
-CMD ["node", "server.js"]
+# Start cron daemon in background, then launch node server
+CMD ["sh", "-c", "cron && node server.js"]

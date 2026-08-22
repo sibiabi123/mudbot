@@ -183,8 +183,17 @@ async function addCronJob(userDir, scheduleId, cronExpression, encryptedPayload)
   const cronLabel = `# mudbot-${userDir}-${scheduleId}`;
 
   return new Promise((resolve, reject) => {
-    const getCrontab = spawn('crontab', ['-l']);
+    let getCrontab;
+    try {
+      getCrontab = spawn('crontab', ['-l']);
+    } catch (err) {
+      return resolve({ success: false, error: err.message });
+    }
     let current = '';
+    getCrontab.on('error', (err) => {
+      console.warn('[scheduleService] crontab -l error:', err.message);
+      resolve({ success: false, error: err.message });
+    });
     getCrontab.stdout.on('data', d => { current += d.toString(); });
     getCrontab.stderr.on('data', () => {});
 
@@ -195,7 +204,16 @@ async function addCronJob(userDir, scheduleId, cronExpression, encryptedPayload)
         .filter(l => l.trim() !== '');
       lines.push(cronLabel, cronCommand);
 
-      const setCrontab = spawn('crontab', ['-']);
+      let setCrontab;
+      try {
+        setCrontab = spawn('crontab', ['-']);
+      } catch (err) {
+        return resolve({ success: false });
+      }
+      setCrontab.on('error', (err) => {
+        console.warn('[scheduleService] crontab - error:', err.message);
+        resolve({ success: false, error: err.message });
+      });
       setCrontab.stdin.write(lines.join('\n') + '\n');
       setCrontab.stdin.end();
       setCrontab.on('close', code => {
@@ -208,8 +226,14 @@ async function addCronJob(userDir, scheduleId, cronExpression, encryptedPayload)
 
 async function removeAllCronJobs(userDir) {
   return new Promise((resolve) => {
-    const getCrontab = spawn('crontab', ['-l']);
+    let getCrontab;
+    try {
+      getCrontab = spawn('crontab', ['-l']);
+    } catch (err) {
+      return resolve({ success: false });
+    }
     let current = '';
+    getCrontab.on('error', () => resolve({ success: false }));
     getCrontab.stdout.on('data', d => { current += d.toString(); });
     getCrontab.stderr.on('data', () => {});
 
@@ -219,7 +243,13 @@ async function removeAllCronJobs(userDir) {
                     !l.includes(`run-schedule.js ${userDir} `))
         .filter(l => l.trim() !== '');
 
-      const setCrontab = spawn('crontab', ['-']);
+      let setCrontab;
+      try {
+        setCrontab = spawn('crontab', ['-']);
+      } catch (err) {
+        return resolve({ success: false });
+      }
+      setCrontab.on('error', () => resolve({ success: false }));
       setCrontab.stdin.write(lines.join('\n') + '\n');
       setCrontab.stdin.end();
       setCrontab.on('close', () => resolve({ success: true }));
@@ -229,8 +259,14 @@ async function removeAllCronJobs(userDir) {
 
 async function removeCronJob(userDir, scheduleId) {
   return new Promise((resolve) => {
-    const getCrontab = spawn('crontab', ['-l']);
+    let getCrontab;
+    try {
+      getCrontab = spawn('crontab', ['-l']);
+    } catch (err) {
+      return resolve({ success: false });
+    }
     let current = '';
+    getCrontab.on('error', () => resolve({ success: false }));
     getCrontab.stdout.on('data', d => { current += d.toString(); });
     getCrontab.stderr.on('data', () => {});
 
@@ -240,7 +276,13 @@ async function removeCronJob(userDir, scheduleId) {
                     !l.includes(`run-schedule.js ${userDir} ${scheduleId} `))
         .filter(l => l.trim() !== '');
 
-      const setCrontab = spawn('crontab', ['-']);
+      let setCrontab;
+      try {
+        setCrontab = spawn('crontab', ['-']);
+      } catch (err) {
+        return resolve({ success: false });
+      }
+      setCrontab.on('error', () => resolve({ success: false }));
       setCrontab.stdin.write(lines.join('\n') + '\n');
       setCrontab.stdin.end();
       setCrontab.on('close', () => resolve({ success: true }));
@@ -255,8 +297,14 @@ async function syncCronJobs(userDir, token) {
   if (!schedules.length) return;
 
   const currentCrontab = await new Promise(resolve => {
-    const proc = spawn('crontab', ['-l']);
+    let proc;
+    try {
+      proc = spawn('crontab', ['-l']);
+    } catch (err) {
+      return resolve('');
+    }
     let out = '';
+    proc.on('error', () => resolve(''));
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', () => {});
     proc.on('close', () => resolve(out));

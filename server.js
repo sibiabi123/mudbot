@@ -52,13 +52,29 @@ function ensureDailyReportCron() {
     const scriptPath = path.join(__dirname, 'scripts', 'daily-report.js');
     const cronLine = `5 0 * * * ${process.execPath} ${scriptPath}`;
 
-    const get = spawn('crontab', ['-l']);
+    let get;
+    try {
+      get = spawn('crontab', ['-l']);
+    } catch (err) {
+      console.warn('[cron] crontab spawn error:', err.message);
+      return resolve();
+    }
     let current = '';
+    get.on('error', (err) => {
+      console.warn('[cron] crontab not available or error:', err.message);
+      resolve();
+    });
     get.stdout.on('data', d => { current += d.toString(); });
     get.on('close', () => {
       if (current.includes(DAILY_REPORT_CRON_LABEL)) return resolve();
       const updated = current.trimEnd() + `\n${DAILY_REPORT_CRON_LABEL}\n${cronLine}\n`;
-      const set = spawn('crontab', ['-']);
+      let set;
+      try {
+        set = spawn('crontab', ['-']);
+      } catch (err) {
+        return resolve();
+      }
+      set.on('error', () => resolve());
       set.stdin.write(updated);
       set.stdin.end();
       set.on('close', code => {
@@ -73,8 +89,14 @@ function ensureDailyReportCron() {
 function removeDailyReportCron() {
   if (IS_WINDOWS) return Promise.resolve();
   return new Promise(resolve => {
-    const get = spawn('crontab', ['-l']);
+    let get;
+    try {
+      get = spawn('crontab', ['-l']);
+    } catch (err) {
+      return resolve();
+    }
     let current = '';
+    get.on('error', () => resolve());
     get.stdout.on('data', d => { current += d.toString(); });
     get.on('close', () => {
       if (!current.includes(DAILY_REPORT_CRON_LABEL)) return resolve();
@@ -85,7 +107,13 @@ function removeDailyReportCron() {
       if (idx === -1) return resolve();
       lines.splice(idx, 2);
 
-      const set = spawn('crontab', ['-']);
+      let set;
+      try {
+        set = spawn('crontab', ['-']);
+      } catch (err) {
+        return resolve();
+      }
+      set.on('error', () => resolve());
       set.stdin.write(lines.join('\n'));
       set.stdin.end();
       set.on('close', code => {
