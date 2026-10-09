@@ -236,11 +236,15 @@ function killAllLoginProcs() {
   for (const [userDir, entry] of loginProcs) killLoginProc(userDir, entry);
 }
 
-async function getQRCode(userDir, token) {
+async function getQRCode(userDir, token, attempt = 1) {
   const existing = loginProcs.get(userDir);
   if (existing) killLoginProc(userDir, existing);
 
-  await purgeMudslideCache(userDir);
+  if (attempt === 1) {
+    await purgeMudslideCache(userDir);
+  }
+  // Pre-create the directory so mudslide doesn't halt with "Restart required"
+  await fs.mkdir(mudslideDir(userDir), { recursive: true }).catch(() => {});
 
   const confPath = token ? await proxyConfPath(userDir, token) : null;
   const useProxy = confPath && CONFIG.PROXYCHAINS_PATH;
@@ -261,10 +265,6 @@ async function getQRCode(userDir, token) {
     const proc = spawn(bin, argv);
     const entry = { proc, reapTimer: null };
     loginProcs.set(userDir, entry);
-    // Backstop for an unscanned QR — mudslide/Baileys almost certainly gives up
-    // on its own well before this, since a real scan makes it exit within seconds
-    // (see the "press any key" handling below). This just guarantees nothing
-    // lingers if that internal cleanup doesn't happen.
     entry.reapTimer = setTimeout(() => killLoginProc(userDir, entry), LOGIN_REAP_MS);
 
     let output = '';
@@ -272,25 +272,22 @@ async function getQRCode(userDir, token) {
     let resolved = false;
     let keypressSent = false;
 
+    const hasQrBlocks = (txt) => txt.includes('▄') || txt.includes('█') || txt.includes('▀') || txt.includes('▌') || txt.includes('▐');
+
     const onStdout = (data) => {
       output += data.toString();
       if (idleTimer) clearTimeout(idleTimer);
-      const meaningful = output.split('\n')
-        .filter(l => !l.trim().startsWith('Created mudslide cache folder'))
-        .filter(l => !l.trim().startsWith('[proxychains]'))
-        .join('\n').trim();
-      if (meaningful && !resolved) {
+
+      if (hasQrBlocks(output) && !resolved) {
         idleTimer = setTimeout(() => {
           resolved = true;
           resolve({ success: true, qr: stripProxy(output) });
-        }, 2000);
+        }, 1500);
       }
     };
 
     const onStderr = (data) => {
       const text = data.toString();
-      // mudslide prints "press any key to exit" on stderr after QR scan.
-      // stdin is a pipe (not a TTY) so it would hang — send keypress automatically.
       if (text.includes('press any key') && !keypressSent) {
         keypressSent = true;
         proc.stdin.write('\n');
@@ -300,16 +297,30 @@ async function getQRCode(userDir, token) {
     proc.stdout.on('data', onStdout);
     proc.stderr.on('data', onStderr);
 
-    proc.on('close', () => {
+    proc.on('close', async (code) => {
       if (loginProcs.get(userDir) === entry) {
         clearTimeout(entry.reapTimer);
         loginProcs.delete(userDir);
       }
       releaseRelayOnce();
       if (idleTimer) clearTimeout(idleTimer);
+
       if (!resolved) {
-        if (output.trim()) resolve({ success: true, qr: stripProxy(output) });
-        else reject(new Error('No output from mudslide login'));
+        if (hasQrBlocks(output)) {
+          resolved = true;
+          resolve({ success: true, qr: stripProxy(output) });
+        } else if (attempt < 3 && (output.includes('Restart required') || output.includes('Created mudslide'))) {
+          // Retry once with pre-created directory
+          try {
+            const nextResult = await getQRCode(userDir, token, attempt + 1);
+            resolve(nextResult);
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          if (output.trim()) resolve({ success: true, qr: stripProxy(output) });
+          else reject(new Error('No output from mudslide login'));
+        }
       }
     });
 
@@ -319,7 +330,7 @@ async function getQRCode(userDir, token) {
         if (output.trim()) resolve({ success: true, qr: stripProxy(output) });
         else { proc.kill(); reject(new Error('QR code timeout')); }
       }
-    }, 30000);
+    }, 35000);
   });
 }
 
